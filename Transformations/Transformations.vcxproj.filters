@@ -10,12 +10,10 @@
     <ClCompile Include="transformations.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="Shader.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="Camera.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="transformations.frag" />
@@ -23,5 +21,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\Textures\minecraft_earth_block.jpg" />
+    <Image Include="minecraft_block.jpg" />
   </ItemGroup>
 </Project>

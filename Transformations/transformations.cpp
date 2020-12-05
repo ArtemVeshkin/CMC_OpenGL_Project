@@ -1,34 +1,102 @@
+// GLEW
 #define GLEW_STATIC
-
 #include <GL/glew.h>
+
+// GLFW
 #include <GLFW/glfw3.h>
+
+// SOIL (for textures)
 #include <SOIL/SOIL.h>
 
+// GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// STD
 #include <iostream>
+#include <string>
 
+// My headers
 #include "Shader.h"
+#include "Camera.h"
 
-const GLuint WIDTH = 800, HEIGHT = 800;
+const GLuint WIDTH = 1200, HEIGHT = 900;
 
 // Вершины
 GLfloat vertices[] = {
-	// Координаты         // Цвета			  // Текстурные координаты
-	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // Верхняя правая
-	 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // Нижняя правая
-	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // Нижняя левая
-	-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // Верхняя левая
-};
-// Как по вершинам строить треугольники
-GLuint indices[] = {
-	0, 1, 3, // Первый треугольник
-	1, 2, 3  // Второй треугольник
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 
+glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
+// Камера
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+GLfloat lastX = WIDTH / 2.0;
+GLfloat lastY = HEIGHT / 2.0;
+bool firstMouse = true;
+
+bool keys[1024];
+
+// Deltatime
+GLfloat deltaTime = 0.0f;	// Time between current frame and last frame
+GLfloat lastFrame = 0.0f;  	// Time of last frame
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void do_movement();
 
 int main()
 {
@@ -55,8 +123,15 @@ int main()
 
 	glfwMakeContextCurrent(window);
 
-	// Установка реакции на нажатие ESC
+	// Установка реакции на нажатие клавиш
 	glfwSetKeyCallback(window, key_callback);
+	// Установка реакции на движения мыши
+	glfwSetCursorPosCallback(window, mouse_callback);
+	// Установка реакции на колесико мыши
+	glfwSetScrollCallback(window, scroll_callback);
+
+	// Скрываем курсор при попадании в область окна
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
@@ -66,6 +141,8 @@ int main()
 	}
 
 	glViewport(0, 0, WIDTH, HEIGHT);
+
+	glEnable(GL_DEPTH_TEST);
 
 	Shader ourShader("transformations.vert", "transformations.frag");
 
@@ -79,10 +156,6 @@ int main()
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
 
-	// Объект элементного буфера (Element Buffer Objects)
-	GLuint EBO;
-	glGenBuffers(1, &EBO);
-
 	// Привязываем VAO
 	glBindVertexArray(VAO);
 
@@ -90,20 +163,13 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	// Копируем индексы в буфер EBO
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
 	// Сообщаем как надо интерпретировать вершинные данные
 	// Координаты
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
-	// Цвет
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
 	// Текстурные координаты
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 
 	// Отвязываем VAO
 	glBindVertexArray(0);
@@ -114,7 +180,7 @@ int main()
 	glBindTexture(GL_TEXTURE_2D, texture);
 
 	int width, height;
-	unsigned char* image = SOIL_load_image("minecraft_earth_block.jpg", &width, &height, 0, SOIL_LOAD_RGB);
+	unsigned char* image = SOIL_load_image("minecraft_block.jpg", &width, &height, 0, SOIL_LOAD_RGB);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -125,13 +191,19 @@ int main()
 	// Игровой цикл
 	while (!glfwWindowShouldClose(window))
 	{
+		// Calculate deltatime of current frame
+		GLfloat currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		// Проверяем события и вызываем функции обратного вызова
 		glfwPollEvents();
+		do_movement();
 
 		// Команды отрисовки
 		// Очищаем цветовой буфер
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// .: Код отрисовки :.
 
@@ -142,16 +214,30 @@ int main()
 		ourShader.Use();
 
 		// Трансформация при помощи матриц
-		glm::mat4 trans{1.0f};
-		// trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-		// trans = glm::rotate(trans, (GLfloat)glfwGetTime() * 1.5f, glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::mat4 view = camera.GetViewMatrix();
 
-		GLuint transformLoc = glGetUniformLocation(ourShader.Program, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
+
+
+		GLuint modelLoc = glGetUniformLocation(ourShader.Program, "model");
+		GLuint viewLoc = glGetUniformLocation(ourShader.Program, "view");
+		GLuint projectionLoc = glGetUniformLocation(ourShader.Program, "projection");
+
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 		// Выводим вершины
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_INT, 0);
+		for (GLuint i = 0; i < 10; ++i)
+		{
+			glm::mat4 model{ 1.0f };
+			model = glm::translate(model, cubePositions[i]);
+			GLfloat angle = 20.0f * i + glfwGetTime() * (10.0f + 5.0f * i);
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 		glBindVertexArray(0);
 
 		// Меняем буферы местами
@@ -171,8 +257,46 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
-	if (key == GLFW_KEY_H && action == GLFW_PRESS)
+	if (key >= 0 && key < sizeof(keys))
 	{
-		std::cout << "Hello!" << std::endl;
+		if (action == GLFW_PRESS)
+			keys[key] = true;
+		else if (action == GLFW_RELEASE)
+			keys[key] = false;
 	}
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	GLfloat xoffset = xpos - lastX;
+	GLfloat yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to left
+	lastX = xpos;
+	lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	camera.ProcessMouseScroll(yoffset);
+}
+
+void do_movement()
+{
+	// Camera controls
+	if (keys[GLFW_KEY_W])
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (keys[GLFW_KEY_S])
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (keys[GLFW_KEY_A])
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (keys[GLFW_KEY_D])
+		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
