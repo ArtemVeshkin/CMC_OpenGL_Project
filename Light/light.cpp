@@ -194,54 +194,49 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Перемещаем источник света
-		lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
-		lightPos.z = sin(glfwGetTime() / 2.0f) * 1.0f;
+		// lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
+		// lightPos.z = sin(glfwGetTime() / 2.0f) * 1.0f;
 
 		// .: Код отрисовки :.
 
 		// Активируем шейдерную программу
 		lightShader.Use();
-		GLint objectColorLoc = glGetUniformLocation(lightShader.Program, "objectColor");
-		GLint lightColorLoc = glGetUniformLocation(lightShader.Program, "lightColor");
-		GLint lightPosLoc = glGetUniformLocation(lightShader.Program, "lightPos");
-		GLint viewPosLoc = glGetUniformLocation(lightShader.Program, "viewPos");
 
-		glUniform3f(objectColorLoc, 1.0f, 0.5f, 0.31f);
-		glUniform3f(lightColorLoc, 1.0f, 0.5f, 1.0f);
-		glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
-		glUniform3f(viewPosLoc, camera.Position.x, camera.Position.y, camera.Position.z);
+		lightShader.setVec3("lightColor", 1.0f, 0.5f, 1.0f);
+		
+		lightShader.setVec3("viewPos", camera.Position);
 
+		lightShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+		lightShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+		lightShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+		lightShader.setFloat("material.shininess", 32.0f);
+
+		lightShader.setVec3("light.position", lightPos);
+		lightShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+		lightShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+		lightShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 		// Трансформация при помощи матриц
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
-
-		GLuint modelLoc = glGetUniformLocation(lightShader.Program, "model");
-		GLuint viewLoc = glGetUniformLocation(lightShader.Program, "view");
-		GLuint projLoc = glGetUniformLocation(lightShader.Program, "projection");
-
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+		lightShader.setMat4("view", view);
+		lightShader.setMat4("projection", projection);
 
 		glBindVertexArray(containerVAO);
 		glm::mat4 model{1.0f};
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		lightShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
 
 		// Рисуем источник света
 		lampShader.Use();
-		modelLoc = glGetUniformLocation(lampShader.Program, "model");
-		viewLoc = glGetUniformLocation(lampShader.Program, "view");
-		projLoc = glGetUniformLocation(lampShader.Program, "projection");
-
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+		lampShader.setMat4("view", view);
+		lampShader.setMat4("projection", projection);
 
 		model = glm::mat4{1.0f};
 		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		lampShader.setMat4("model", model);
 
 		glBindVertexArray(lightVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
