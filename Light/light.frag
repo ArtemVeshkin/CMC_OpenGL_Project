@@ -8,6 +8,10 @@ struct Light {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
 };
 
 in vec3 FragPos;
@@ -22,7 +26,19 @@ uniform sampler2D specularMap;
 
 uniform Light light;  
 
+vec3 PhongLightModel();
+
 void main()
+{
+    // Коэффициент затухания света
+    float distance    = length(light.position - FragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+
+    vec3 result = PhongLightModel() * attenuation;
+    color = vec4(result, 1.0f);
+}
+
+vec3 PhongLightModel()
 {
     // Фоновое освещение
     vec3 ambient = light.ambient * texture(diffuseMap, TexCoords).rgb;
@@ -41,6 +57,5 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = spec * light.specular * texture(specularMap, TexCoords).rgb;
 
-    vec3 result = ambient + diffuse + specular;
-    color = vec4(result, 1.0f);
+    return ambient + diffuse + specular;
 }

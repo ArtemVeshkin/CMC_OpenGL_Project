@@ -69,6 +69,19 @@ float vertices[] = {
 	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
+glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
 // Камера
 Camera camera(glm::vec3(0.0f, 1.5f, 5.0f));
 GLfloat lastX = WIDTH / 2.0;
@@ -205,8 +218,8 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Перемещаем источник света
-		lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
-		lightPos.z = sin(glfwGetTime() / 2.0f) * 1.0f;
+		// lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
+		// lightPos.z = sin(glfwGetTime() / 2.0f) * 1.0f;
 
 		// .: Код отрисовки :.
 
@@ -217,11 +230,15 @@ int main()
 		lightShader.setVec3("viewPos", camera.Position);
 		lightShader.setVec3("light.position", lightPos);
 
-		lightShader.setFloat("shininess", 64.0f);
+		lightShader.setFloat("shininess", 32.0f);
 
 		lightShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
 		lightShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
 		lightShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+		lightShader.setFloat("light.constant", 1.0f);
+		lightShader.setFloat("light.linear", 0.09f);
+		lightShader.setFloat("light.quadratic", 0.032f);
 
 		// Трансформация при помощи матриц
 		glm::mat4 view = camera.GetViewMatrix();
@@ -236,18 +253,25 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 
 		glBindVertexArray(containerVAO);
-		glm::mat4 model{1.0f};
-		lightShader.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			// calculate the model matrix for each object and pass it to shader before drawing
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, cubePositions[i]);
+			float angle = 20.0f * i;
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			lightShader.setMat4("model", model);
+
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 		glBindVertexArray(0);
-
-
 
 		// Рисуем источник света
 		lampShader.Use();
 		lampShader.setMat4("view", view);
 		lampShader.setMat4("projection", projection);
 
+		glm::mat4 model = glm::mat4(1.0f);
 		model = glm::mat4{1.0f};
 		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f));
