@@ -41,4 +41,12 @@
       <Filter>Файлы ресурсов</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="container.png">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="container_specular.png">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+  </ItemGroup>
 </Project>
