@@ -31,10 +31,13 @@ void DoMovement();
 GLFWwindow* Init();
 void UpdateDeltaTime();
 GLuint LoadTexture(std::string name);
+unsigned int LoadCubeMap(std::vector<std::string> names);
+GLuint GenSkyBoxVAO();
+void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture);
 
 const GLuint WIDTH = 1400, HEIGHT = 900;
 
-Camera camera(glm::vec3(0.0f, 1.5f, 5.0f));
+Camera camera(glm::vec3(0.0f, 2.0f, 6.0f));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool firstMouse = true;
@@ -49,6 +52,26 @@ int main()
 {
     auto window = Init();
 
+    Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
+    Shader duckShader("Shaders/duckShader.vert", "Shaders/duckShader.frag");
+
+    Model duckModel("Models/Duck/Duck.obj");
+
+    // Skybox
+    std::vector<std::string> names = {
+        "Textures/skybox/right.jpg",
+        "Textures/skybox/left.jpg",
+        "Textures/skybox/top.jpg",
+        "Textures/skybox/bottom.jpg",
+        "Textures/skybox/front.jpg",
+        "Textures/skybox/back.jpg",
+    };
+    GLuint skyboxTexture = LoadCubeMap(names);
+    GLuint skyboxVAO = GenSkyBoxVAO();
+
+    skyboxShader.Use();
+    skyboxShader.setInt("skybox", 0);
+
     // Game Loop
     while (!glfwWindowShouldClose(window))
     {
@@ -56,7 +79,27 @@ int main()
         glfwPollEvents();
         DoMovement();
 
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Camera
+        glm::mat4 model(1.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+
+        // Duck
+        duckShader.Use();
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+        duckShader.setMat4("model", model);
+        duckShader.setMat4("view", view);
+        duckShader.setMat4("projection", projection);
+        duckModel.Draw(duckShader);
+
+        // Skybox (Рисую последним)
+        DrawSkyBox(skyboxShader, view, projection, skyboxVAO, skyboxTexture);
 
         glfwSwapBuffers(window);
     }
@@ -141,6 +184,108 @@ GLuint LoadTexture(std::string name)
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return texture;
+}
+
+GLuint LoadCubeMap(std::vector<std::string> names)
+{
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+    int width, height;
+    for (int i = 0; i < names.size(); ++i)
+    {
+        unsigned char* image = SOIL_load_image(names[i].c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+        if (image)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image
+            );
+            SOIL_free_image_data(image);
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return texture;
+}
+
+GLuint GenSkyBoxVAO()
+{
+    GLfloat skyboxVertices[] = {
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+
+    GLuint skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
+    return skyboxVAO;
+}
+
+void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture)
+{
+    glDepthFunc(GL_LEQUAL);
+    skyboxShader.Use();
+    // Не хотим, чтобы скайбокс двигался
+    view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+    skyboxShader.setMat4("view", view);
+    skyboxShader.setMat4("projection", projection);
+    glBindVertexArray(skyboxVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+    glDepthFunc(GL_LESS);
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)

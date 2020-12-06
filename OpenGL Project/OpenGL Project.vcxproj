@@ -149,6 +149,12 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\duckShader.frag" />
+    <None Include="Shaders\duckShader.vert" />
+    <None Include="Shaders\skyboxShader.frag" />
+    <None Include="Shaders\skyboxShader.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
