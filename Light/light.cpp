@@ -230,7 +230,7 @@ int main()
 		lightShader.setVec3("viewPos", camera.Position);
 		lightShader.setVec3("light.position", lightPos);
 
-		lightShader.setFloat("shininess", 32.0f);
+		lightShader.setFloat("shininess", 64.0f);
 
 		lightShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
 		lightShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
