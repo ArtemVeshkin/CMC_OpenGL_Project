@@ -52,19 +52,22 @@ int main()
 {
     auto window = Init();
 
+    // Shaders
     Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
     Shader duckShader("Shaders/duckShader.vert", "Shaders/duckShader.frag");
 
+    // Models
     Model duckModel("Models/Duck/Duck.obj");
 
     // Skybox
     std::vector<std::string> names = {
-        "Textures/skybox/right.jpg",
-        "Textures/skybox/left.jpg",
-        "Textures/skybox/top.jpg",
-        "Textures/skybox/bottom.jpg",
-        "Textures/skybox/front.jpg",
-        "Textures/skybox/back.jpg",
+        "Textures/skybox/Footballfield/posx.jpg",
+        "Textures/skybox/Footballfield/negx.jpg",
+        "Textures/skybox/Footballfield/posy.jpg",
+        "Textures/skybox/Footballfield/negy.jpg",
+        "Textures/skybox/Footballfield/posz.jpg",
+        "Textures/skybox/Footballfield/negz.jpg",
+        
     };
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
@@ -116,7 +119,7 @@ GLFWwindow* Init()
 
     // Создание окна
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Veshkin Artem :: group 301", nullptr, nullptr);
     if (window == nullptr)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
