@@ -30,7 +30,7 @@ void DoMovement();
 
 GLFWwindow* Init();
 void UpdateDeltaTime();
-GLuint LoadTexture(std::string name);
+GLuint LoadTexture(std::string name, GLenum format = GL_RGB);
 unsigned int LoadCubeMap(std::vector<std::string> names);
 GLuint GenSkyBoxVAO();
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture);
@@ -58,20 +58,25 @@ int main()
 
     // Models
     Model duckModel("Models/Duck/Duck.obj");
+    GLuint duckReflectMap = LoadTexture("Models/Duck/reflectMap.jpg");
 
     // Skybox
     std::vector<std::string> names = {
-        "Textures/skybox/Footballfield/posx.jpg",
-        "Textures/skybox/Footballfield/negx.jpg",
-        "Textures/skybox/Footballfield/posy.jpg",
-        "Textures/skybox/Footballfield/negy.jpg",
-        "Textures/skybox/Footballfield/posz.jpg",
-        "Textures/skybox/Footballfield/negz.jpg",
+        "Textures/skybox/Sky/posx.jpg",
+        "Textures/skybox/Sky/negx.jpg",
+        "Textures/skybox/Sky/posy.jpg",
+        "Textures/skybox/Sky/negy.jpg",
+        "Textures/skybox/Sky/posz.jpg",
+        "Textures/skybox/Sky/negz.jpg",
         
     };
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
 
+    duckShader.Use();
+    duckShader.setInt("reflectMap", 2);
+    duckShader.setInt("skybox", 3);
+    
     skyboxShader.Use();
     skyboxShader.setInt("skybox", 0);
 
@@ -91,6 +96,7 @@ int main()
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 
         // Duck
+        {
         duckShader.Use();
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
@@ -99,7 +105,13 @@ int main()
         duckShader.setMat4("model", model);
         duckShader.setMat4("view", view);
         duckShader.setMat4("projection", projection);
+        duckShader.setVec3("cameraPos", camera.Position);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, duckReflectMap);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
         duckModel.Draw(duckShader);
+        }
 
         // Skybox (Рисую последним)
         DrawSkyBox(skyboxShader, view, projection, skyboxVAO, skyboxTexture);
@@ -166,16 +178,16 @@ void DoMovement()
         camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
-GLuint LoadTexture(std::string name)
+GLuint LoadTexture(std::string name, GLenum format)
 {
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
     int width, height;
-    unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+    unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, 0, SOIL_LOAD_AUTO);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
