@@ -46,6 +46,7 @@ bool keys[1024];
 
 // Light position
 glm::vec3 lampPos(0.8f, 1.7f, 1.0f);
+bool lightMoving = false;
 
 // Deltatime
 GLfloat deltaTime = 0.0f;
@@ -57,12 +58,10 @@ int main()
 
     // Shaders
     Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
-    Shader duckShader("Shaders/duckShader.vert", "Shaders/duckShader.frag");
     Shader astronautShader("Shaders/astronautShader.vert", "Shaders/astronautShader.frag");
     Shader lampShader("Shaders/lampShader.vert", "Shaders/lampShader.frag");
 
     // Models
-
     Model astronautModel("Models/astronaut-white-suit/astronaut.obj");
     GLuint astronautSpecularMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-S.png");
     GLuint astronautReflectMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-reflect.png");
@@ -101,6 +100,10 @@ int main()
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Light position
+        lightMoving ? lampPos = glm::vec3(sin(glfwGetTime()), lampPos.y, cos(glfwGetTime()))
+                    : lampPos = glm::vec3(0.8f, 1.7f, 1.0f);
 
         // Camera
         glm::mat4 model(1.0f);
@@ -350,6 +353,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, GL_TRUE);
+    }
+
+    if (key == GLFW_KEY_M && action == GLFW_PRESS)
+    {
+        lightMoving ^= true;
     }
 
     if (key >= 0 && key < sizeof(keys))

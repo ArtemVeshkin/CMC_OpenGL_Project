@@ -73,7 +73,7 @@ vec3 PhongLightModel()
     vec3 specular = spec * light.specular * texture(specularMap, TexCoords).rgb;
 
     // Свечения
-    vec3 emission = texture(emissionMap, TexCoords).rgb;
+    vec3 emission = 1.5f * texture(emissionMap, TexCoords).rgb;
 
     // Коэффициент затухания света
     float distance    = length(light.position - Position);
