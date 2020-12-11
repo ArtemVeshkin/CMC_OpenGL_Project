@@ -152,6 +152,8 @@
   <ItemGroup>
     <None Include="Shaders\astronautShader.frag" />
     <None Include="Shaders\astronautShader.vert" />
+    <None Include="Shaders\floorShader.frag" />
+    <None Include="Shaders\floorShader.vert" />
     <None Include="Shaders\lampShader.frag" />
     <None Include="Shaders\lampShader.vert" />
     <None Include="Shaders\skyboxShader.frag" />

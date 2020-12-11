@@ -33,11 +33,12 @@ void UpdateDeltaTime();
 GLuint LoadTexture(std::string name, GLenum format = GL_RGB);
 unsigned int LoadCubeMap(std::vector<std::string> names);
 GLuint GenSkyBoxVAO();
+GLuint GenFloorVAO();
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture);
 
 const GLuint WIDTH = 1500, HEIGHT = 1000;
 
-Camera camera(glm::vec3(0.0f, 1.0f, 3.3f));
+Camera camera(glm::vec3(0.0f, 1.3f, 4.0f));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool firstMouse = true;
@@ -46,6 +47,7 @@ bool keys[1024];
 
 // Light position
 glm::vec3 lampPos(0.8f, 1.7f, 1.0f);
+glm::vec3 lampPower(1.0f, 0.045f, 0.0075f);
 bool lightMoving = false;
 
 // Deltatime
@@ -60,6 +62,7 @@ int main()
     Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
     Shader astronautShader("Shaders/astronautShader.vert", "Shaders/astronautShader.frag");
     Shader lampShader("Shaders/lampShader.vert", "Shaders/lampShader.frag");
+    Shader floorShader("Shaders/floorShader.vert", "Shaders/floorShader.frag");
 
     // Models
     Model astronautModel("Models/astronaut-white-suit/astronaut.obj");
@@ -68,6 +71,10 @@ int main()
     GLuint astronautEmissiontMap = LoadTexture("Models/astronaut-white-suit/Astronaut_black_illu.png");
 
     Model lampModel("Models/Ball/ball.obj");
+
+    // Floor
+    GLuint floorVAO = GenFloorVAO();
+    GLuint floorTexture = LoadTexture("Textures/Floor/1_512.jpg");
 
     // Skybox
     std::string skybox_name = "lightblue", skybox_type = "png";
@@ -82,11 +89,15 @@ int main()
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
 
+    // Binding textures
     astronautShader.Use();
     astronautShader.setInt("specularMap", 2);
     astronautShader.setInt("reflectMap", 3);
     astronautShader.setInt("emissionMap", 4);
     astronautShader.setInt("skybox", 5);
+
+    floorShader.Use();
+    floorShader.setInt("texture_diffuse1", 0);
 
     skyboxShader.Use();
     skyboxShader.setInt("skybox", 0);
@@ -110,6 +121,37 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 
+        // Floor
+        {
+            floorShader.Use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            //model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0));
+            floorShader.setMat4("model", model);
+            floorShader.setMat4("view", view);
+            floorShader.setMat4("projection", projection);
+            floorShader.setVec3("cameraPos", camera.Position);
+            // Light
+            floorShader.setVec3("viewPos", camera.Position);
+            floorShader.setVec3("light.position", lampPos);
+
+            floorShader.setFloat("shininess", 128.0f);
+
+            floorShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+            floorShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+            floorShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+            floorShader.setFloat("light.constant", lampPower.x);
+            floorShader.setFloat("light.linear", lampPower.y);
+            floorShader.setFloat("light.quadratic", lampPower.z);
+
+            glBindVertexArray(floorVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+
         // Astronaut
         {
             astronautShader.Use();
@@ -131,9 +173,9 @@ int main()
             astronautShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
             astronautShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
-            astronautShader.setFloat("light.constant", 1.0f);
-            astronautShader.setFloat("light.linear", 0.09f);
-            astronautShader.setFloat("light.quadratic", 0.032f);
+            astronautShader.setFloat("light.constant", lampPower.x);
+            astronautShader.setFloat("light.linear", lampPower.y);
+            astronautShader.setFloat("light.quadratic", lampPower.z);
             // Maps
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, astronautSpecularMap);
@@ -330,6 +372,35 @@ GLuint GenSkyBoxVAO()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
     glBindVertexArray(0);
     return skyboxVAO;
+}
+
+GLuint GenFloorVAO()
+{
+    GLfloat floorVertices[] = {
+        // positions           // normal          // texture Coords 
+         10.0f, 0.0f,  10.0f,  0.0f, 1.0f, 0.0f,  16.0f,  0.0f,
+        -10.0f, 0.0f,  10.0f,  0.0f, 1.0f, 0.0f,  0.0f ,  0.0f,
+        -10.0f, 0.0f, -10.0f,  0.0f, 1.0f, 0.0f,  0.0f , 16.0f,
+
+         10.0f, 0.0f,  10.0f,  0.0f, 1.0f, 0.0f,  16.0f, 0.0f,
+        -10.0f, 0.0f, -10.0f,  0.0f, 1.0f, 0.0f,  0.0f , 16.0f,
+         10.0f, 0.0f, -10.0f,  0.0f, 1.0f, 0.0f,  16.0f, 16.0f
+    };
+
+    GLuint floorVAO, floorVBO;
+    glGenVertexArrays(1, &floorVAO);
+    glGenBuffers(1, &floorVBO);
+    glBindVertexArray(floorVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(floorVertices), &floorVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+    glBindVertexArray(0);
+    return floorVAO;
 }
 
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture)

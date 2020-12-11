@@ -47,5 +47,11 @@
     <None Include="Shaders\lampShader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\floorShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\floorShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
