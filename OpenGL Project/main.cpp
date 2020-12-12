@@ -39,15 +39,15 @@ void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuin
 const GLuint WIDTH = 1500, HEIGHT = 1000;
 const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
-Camera camera(glm::vec3(0.0f, 1.3f, 4.0f));
+Camera camera(glm::vec3(0.5f, 1.3f, 5.2f));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool firstMouse = true;
 
 bool keys[1024];
 
-// Light position
-glm::vec3 lampPos(0.8f, 1.7f, 1.0f);
+// Light characteristics
+glm::vec3 lampPos = glm::vec3(0.8f - 0.2f, 2.0f, 1.0f + 0.8f);
 glm::vec3 lampPower(1.0f, 0.045f, 0.0075f);
 bool lightMoving = false;
 
@@ -63,6 +63,7 @@ int main()
     Shader depthShader("Shaders/depthShader.vert", "Shaders/depthShader.frag", "Shaders/depthShader.geom");
     Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
     Shader astronautShader("Shaders/astronautShader.vert", "Shaders/astronautShader.frag");
+    Shader bb8Shader("Shaders/bb8Shader.vert", "Shaders/bb8Shader.frag");
     Shader lampShader("Shaders/lampShader.vert", "Shaders/lampShader.frag");
     Shader floorShader("Shaders/floorShader.vert", "Shaders/floorShader.frag");
 
@@ -71,6 +72,10 @@ int main()
     GLuint astronautSpecularMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-S.png");
     GLuint astronautReflectMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-reflect.png");
     GLuint astronautEmissiontMap = LoadTexture("Models/astronaut-white-suit/Astronaut_black_illu.png");
+
+    Model bb8Model("Models/bb8/source/BB8.fbx");
+    GLuint bb8NormalMap = LoadTexture("Models/bb8/BB8_N.png");
+    GLuint bb8EmissiontMap = LoadTexture("Models/bb8/BB8_E.png");
 
     Model lampModel("Models/Ball/ball.obj");
 
@@ -90,7 +95,7 @@ int main()
     };
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
-
+    
     // Depth Map
     GLuint depthMapFBO, depthCubemap;
     {
@@ -125,6 +130,11 @@ int main()
     astronautShader.setInt("skybox", 6);
     astronautShader.setInt("depthMap", 5);
 
+    bb8Shader.Use();
+    bb8Shader.setInt("normalMap", 2);
+    bb8Shader.setInt("emissionMap", 3);
+    bb8Shader.setInt("depthMap", 4);
+
     floorShader.Use();
     floorShader.setInt("texture_diffuse1", 0);
     floorShader.setInt("depthMap", 1);
@@ -143,8 +153,8 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Light position
-        lightMoving ? lampPos = glm::vec3(sin(glfwGetTime()), lampPos.y, cos(glfwGetTime()))
-                    : lampPos = glm::vec3(0.8f, 1.7f, 1.0f);
+        lightMoving ? lampPos = glm::vec3(sin(glfwGetTime()) - 0.2f, lampPos.y, cos(glfwGetTime()) + 0.8f)
+                    : lampPos = glm::vec3(0.8f - 0.2f, 2.0f, 1.0f + 0.8f);
 
         // Camera
         glm::mat4 model(1.0f);
@@ -184,10 +194,19 @@ int main()
 
             // Astronaut
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f));
             model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, -1.0f, 0.0f));
             depthShader.setMat4("model", model);
             astronautModel.Draw(depthShader);
+
+            // BB8
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.5f, -1.0f));
+            model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(15.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01));
+            depthShader.setMat4("model", model);
+            bb8Model.Draw(depthShader);
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
@@ -232,7 +251,7 @@ int main()
         {
             astronautShader.Use();
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f));
             model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, -1.0f, 0.0f));
             model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0));
             astronautShader.setMat4("model", model);
@@ -257,7 +276,6 @@ int main()
 
             // Maps
             glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, 0);
             glBindTexture(GL_TEXTURE_2D, astronautSpecularMap);
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, astronautReflectMap);
@@ -268,6 +286,44 @@ int main()
             glActiveTexture(GL_TEXTURE6);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
             astronautModel.Draw(astronautShader);
+        }
+
+        // BB8
+        {
+            bb8Shader.Use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.5f, -1.0f));
+            model = glm::rotate(model, glm::radians(90.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(15.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01));
+            bb8Shader.setMat4("model", model);
+            bb8Shader.setMat4("view", view);
+            bb8Shader.setMat4("projection", projection);
+            bb8Shader.setVec3("cameraPos", camera.Position);
+            // Light
+            bb8Shader.setVec3("viewPos", camera.Position);
+            bb8Shader.setVec3("light.position", lampPos);
+
+            bb8Shader.setFloat("shininess", 64.0f);
+
+            bb8Shader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+            bb8Shader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+            bb8Shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+            bb8Shader.setFloat("light.constant", lampPower.x);
+            bb8Shader.setFloat("light.linear", lampPower.y);
+            bb8Shader.setFloat("light.quadratic", lampPower.z);
+
+            bb8Shader.setFloat("farPlane", depthFarPlane);
+
+            // Maps
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, bb8EmissiontMap);
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, bb8EmissiontMap);
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            bb8Model.Draw(bb8Shader);
         }
 
         // Light

@@ -25,16 +25,12 @@ uniform vec3 viewPos;
 uniform float farPlane;
 uniform float shininess;
 uniform sampler2D texture_diffuse1;
-uniform sampler2D texture_normal1;
-uniform sampler2D specularMap;
-uniform sampler2D reflectMap;
+uniform sampler2D texture_specular1;
+uniform sampler2D normalMap;
 uniform sampler2D emissionMap;
 
 uniform vec3 cameraPos;
-uniform samplerCube skybox;
 uniform samplerCube depthMap;
-
-vec3 ReflectSkybox();
 
 vec3 PhongLightModel(float shadow);
 
@@ -42,20 +38,8 @@ float calcShadow();
 
 void main()
 {
-    vec3 result = PhongLightModel(calcShadow()) + ReflectSkybox();
+    vec3 result = PhongLightModel(calcShadow());
     FragColor = vec4(result, 1.0f);
-}
-
-vec3 ReflectSkybox()
-{
-    // Reflecting skybox
-    // Imitation of glass
-    float ratio = 1.00 / 1.52;
-    vec3 falling = normalize(Position - cameraPos);
-    vec3 reflected = refract(falling, normalize(Normal), ratio);
-    vec4 reflection = texture(reflectMap, TexCoords) * (texture(skybox, reflected) 
-                                                      + texture(texture_diffuse1, TexCoords));
-    return (reflection).rgb;
 }
 
 vec3 PhongLightModel(float shadow)
@@ -75,10 +59,10 @@ vec3 PhongLightModel(float shadow)
     vec3 reflectDir = reflect(-lightDir, norm);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = spec * light.specular * texture(specularMap, TexCoords).rgb;
+    vec3 specular = spec * light.specular * texture(texture_specular1, TexCoords).rgb;
 
     // Свечения
-    vec3 emission = 1.6f * texture(emissionMap, TexCoords).rgb;
+    vec3 emission = 1.8f * texture(emissionMap, TexCoords).rgb;
 
     // Коэффициент затухания света
     float distance    = length(light.position - Position);
