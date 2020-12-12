@@ -122,8 +122,8 @@ int main()
     astronautShader.setInt("specularMap", 2);
     astronautShader.setInt("reflectMap", 3);
     astronautShader.setInt("emissionMap", 4);
-    astronautShader.setInt("skybox", 5);
-    astronautShader.setInt("depthMap", 6);
+    astronautShader.setInt("skybox", 6);
+    astronautShader.setInt("depthMap", 5);
 
     floorShader.Use();
     floorShader.setInt("texture_diffuse1", 0);
@@ -262,10 +262,10 @@ int main()
             glBindTexture(GL_TEXTURE_2D, astronautReflectMap);
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_2D, astronautEmissiontMap);
-            
-            glActiveTexture(GL_TEXTURE6);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+
             glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            glActiveTexture(GL_TEXTURE6);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
             astronautModel.Draw(astronautShader);
         }
