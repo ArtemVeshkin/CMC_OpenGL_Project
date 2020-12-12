@@ -191,7 +191,7 @@ int main()
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-
+        
         // Rendering scene with depthCubemap
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -253,16 +253,16 @@ int main()
             astronautShader.setFloat("light.linear", lampPower.y);
             astronautShader.setFloat("light.quadratic", lampPower.z);
 
-            //astronautShader.setFloat("farPlane", depthFarPlane);
+            astronautShader.setFloat("farPlane", depthFarPlane);
 
             // Maps
             glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, 0);
             glBindTexture(GL_TEXTURE_2D, astronautSpecularMap);
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, astronautReflectMap);
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_2D, astronautEmissiontMap);
-
             glActiveTexture(GL_TEXTURE5);
             glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
             glActiveTexture(GL_TEXTURE6);

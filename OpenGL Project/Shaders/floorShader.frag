@@ -71,14 +71,10 @@ vec3 PhongLightModel(float shadow)
     return (ambient + (1.0f - shadow) * (diffuse + specular)) * attenuation;
     //return vec3(shadow);
 }
-/*
+
 float calcShadow()
 {
     vec3 fragToLight = Position - light.position;
-
-    float closestDepth = texture(depthMap, fragToLight).r;
-
-    closestDepth *= farPlane;
 
     float currentDepth = length(fragToLight);
 
@@ -102,23 +98,4 @@ float calcShadow()
     shadow /= (samples * samples * samples);
 
     return shadow;
-}*/
-float calcShadow()
-{
-    // расчет вектора между положением фрагмента и положением источника света
-    vec3 fragToLight = Position - light.position;
-    // полученный вектор направлени€ от источника к фрагменту 
-    // используетс€ дл€ выборки из кубической карты глубин
-    float closestDepth = texture(depthMap, fragToLight).r;
-    // получено линейное значение глубины в диапазоне [0,1]
-    // проведем обратную трансформацию в исходный диапазон
-    closestDepth *= farPlane;
-    // получим линейное значение глубины дл€ текущего фрагмента 
-    // как рассто€ние от фрагмента до источника света
-    float currentDepth = length(fragToLight);
-    // тест затенени€
-    float bias = 0.05; 
-    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
-
-    return shadow;
-} 
+}

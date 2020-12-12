@@ -25,6 +25,7 @@ uniform vec3 viewPos;
 uniform float farPlane;
 uniform float shininess;
 uniform sampler2D texture_diffuse1;
+uniform sampler2D texture_normal1;
 uniform sampler2D specularMap;
 uniform sampler2D reflectMap;
 uniform sampler2D emissionMap;
@@ -41,12 +42,8 @@ float calcShadow();
 
 void main()
 {
-    //vec3 result = PhongLightModel(calcShadow());
-    //result = ReflectSkybox();
-    //FragColor = vec4(result, 1.0f);
-    //FragColor = vec4(vec3(texture(depthMap, Position - light.position).r), 1.0);
-    FragColor = vec4(vec3(1 - calcShadow()), 1.0f) / 2 + texture(specularMap, TexCoords);
-    //FragColor = texture(specularMap, TexCoords);
+    vec3 result = PhongLightModel(calcShadow()) + ReflectSkybox();
+    FragColor = vec4(result, 1.0f);
 }
 
 vec3 ReflectSkybox()
@@ -90,7 +87,7 @@ vec3 PhongLightModel(float shadow)
 
     return (ambient + (1.0f - shadow) * (diffuse + specular) + emission) * attenuation;
 }
-/*
+
 float calcShadow()
 {
     vec3 fragToLight = Position - light.position;
@@ -118,23 +115,3 @@ float calcShadow()
 
     return shadow;
 }
-*/
-float calcShadow()
-{
-    // расчет вектора между положением фрагмента и положением источника света
-    vec3 fragToLight = Position - light.position;
-    // полученный вектор направлени€ от источника к фрагменту 
-    // используетс€ дл€ выборки из кубической карты глубин
-    float closestDepth = texture(depthMap, fragToLight).r;
-    // получено линейное значение глубины в диапазоне [0,1]
-    // проведем обратную трансформацию в исходный диапазон
-    closestDepth *= 25.0f;
-    // получим линейное значение глубины дл€ текущего фрагмента 
-    // как рассто€ние от фрагмента до источника света
-    float currentDepth = length(fragToLight);
-    // тест затенени€
-    float bias = 0.05; 
-    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
-
-    return shadow;
-} 
