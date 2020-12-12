@@ -22,6 +22,7 @@ in vec2 TexCoords;
 
 uniform vec3 viewPos;
 
+uniform float farPlane;
 uniform float shininess;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D specularMap;
@@ -32,8 +33,6 @@ uniform vec3 cameraPos;
 uniform samplerCube skybox;
 uniform samplerCube depthMap;
 
-uniform float farPlane;
-
 vec3 ReflectSkybox();
 
 vec3 PhongLightModel(float shadow);
@@ -42,9 +41,12 @@ float calcShadow();
 
 void main()
 {
-    vec3 result = ReflectSkybox() + PhongLightModel(calcShadow());
+    //vec3 result = PhongLightModel(calcShadow());
+    //result = ReflectSkybox();
     //FragColor = vec4(result, 1.0f);
-    FragColor = vec4(vec3(texture(depthMap, Position - light.position).r / farPlane), 1.0); 
+    //FragColor = vec4(vec3(texture(depthMap, Position - light.position).r), 1.0);
+    FragColor = vec4(vec3(1 - calcShadow()), 1.0f) / 2 + texture(specularMap, TexCoords);
+    //FragColor = texture(specularMap, TexCoords);
 }
 
 vec3 ReflectSkybox()
@@ -88,19 +90,51 @@ vec3 PhongLightModel(float shadow)
 
     return (ambient + (1.0f - shadow) * (diffuse + specular) + emission) * attenuation;
 }
-
+/*
 float calcShadow()
 {
     vec3 fragToLight = Position - light.position;
 
-    float closestDepth = texture(depthMap, fragToLight).r;
-
-    closestDepth *= farPlane;
-
     float currentDepth = length(fragToLight);
 
-    float bias = 0.05; 
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    float bias = 0.05;
+    float shadow  = 0.0;
+    float samples = 4.0;
+    float offset  = 0.1;
+    for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+    {
+        for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+        {
+            for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+            {
+                float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
+                closestDepth *= farPlane;   // обратное преобразование из диапазона [0;1]
+                if(currentDepth - bias > closestDepth)
+                    shadow += 1.0;
+            }
+        }
+    }
+    shadow /= (samples * samples * samples);
 
     return shadow;
 }
+*/
+float calcShadow()
+{
+    // расчет вектора между положением фрагмента и положением источника света
+    vec3 fragToLight = Position - light.position;
+    // полученный вектор направления от источника к фрагменту 
+    // используется для выборки из кубической карты глубин
+    float closestDepth = texture(depthMap, fragToLight).r;
+    // получено линейное значение глубины в диапазоне [0,1]
+    // проведем обратную трансформацию в исходный диапазон
+    closestDepth *= 25.0f;
+    // получим линейное значение глубины для текущего фрагмента 
+    // как расстояние от фрагмента до источника света
+    float currentDepth = length(fragToLight);
+    // тест затенения
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+} 

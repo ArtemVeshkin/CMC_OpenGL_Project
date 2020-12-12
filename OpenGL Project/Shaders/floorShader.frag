@@ -36,12 +36,12 @@ vec3 PhongLightModel(float shadow);
 
 void main()
 {
-    if (sqrt(Position.x * Position.x + Position.z * Position.z) > 4)
+    if (sqrt(Position.x * Position.x + Position.z * Position.z) > 5)
         discard;
 
     vec3 result = PhongLightModel(calcShadow());
-    //FragColor = vec4(result, 1.0f);
-    FragColor = vec4(vec3(texture(depthMap, Position - light.position).r / farPlane), 1.0); 
+    FragColor = vec4(result, 1.0f);
+    //FragColor = vec4(vec3(texture(depthMap, Position - light.position).r /  farPlane), 1.0); 
 }
 
 vec3 PhongLightModel(float shadow)
@@ -69,8 +69,9 @@ vec3 PhongLightModel(float shadow)
                                + light.quadratic * (distance * distance));
 
     return (ambient + (1.0f - shadow) * (diffuse + specular)) * attenuation;
+    //return vec3(shadow);
 }
-
+/*
 float calcShadow()
 {
     vec3 fragToLight = Position - light.position;
@@ -81,8 +82,43 @@ float calcShadow()
 
     float currentDepth = length(fragToLight);
 
-    float bias = 0.05; 
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    float bias = 0.05;
+    float shadow  = 0.0;
+    float samples = 4.0;
+    float offset  = 0.1;
+    for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+    {
+        for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+        {
+            for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+            {
+                float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
+                closestDepth *= farPlane;   // обратное преобразование из диапазона [0;1]
+                if(currentDepth - bias > closestDepth)
+                    shadow += 1.0;
+            }
+        }
+    }
+    shadow /= (samples * samples * samples);
 
     return shadow;
-}
+}*/
+float calcShadow()
+{
+    // расчет вектора между положением фрагмента и положением источника света
+    vec3 fragToLight = Position - light.position;
+    // полученный вектор направления от источника к фрагменту 
+    // используется для выборки из кубической карты глубин
+    float closestDepth = texture(depthMap, fragToLight).r;
+    // получено линейное значение глубины в диапазоне [0,1]
+    // проведем обратную трансформацию в исходный диапазон
+    closestDepth *= farPlane;
+    // получим линейное значение глубины для текущего фрагмента 
+    // как расстояние от фрагмента до источника света
+    float currentDepth = length(fragToLight);
+    // тест затенения
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+} 
