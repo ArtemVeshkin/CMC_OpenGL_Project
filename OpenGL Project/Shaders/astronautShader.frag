@@ -30,15 +30,21 @@ uniform sampler2D emissionMap;
 
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
+uniform samplerCube depthMap;
+
+uniform float farPlane;
 
 vec3 ReflectSkybox();
 
-vec3 PhongLightModel();
+vec3 PhongLightModel(float shadow);
+
+float calcShadow();
 
 void main()
 {
-    vec3 result = ReflectSkybox() + PhongLightModel();
-    FragColor = vec4(result, 1.0f);
+    vec3 result = ReflectSkybox() + PhongLightModel(calcShadow());
+    //FragColor = vec4(result, 1.0f);
+    FragColor = vec4(vec3(texture(depthMap, Position - light.position).r / farPlane), 1.0); 
 }
 
 vec3 ReflectSkybox()
@@ -53,7 +59,7 @@ vec3 ReflectSkybox()
     return (reflection).rgb;
 }
 
-vec3 PhongLightModel()
+vec3 PhongLightModel(float shadow)
 {
     // Фоновое освещение
     vec3 ambient = light.ambient * texture(texture_diffuse1, TexCoords).rgb;
@@ -80,5 +86,21 @@ vec3 PhongLightModel()
     float attenuation = 1.0 / (light.constant + light.linear * distance 
                                + light.quadratic * (distance * distance));
 
-    return (ambient + diffuse + specular + emission) * attenuation;
+    return (ambient + (1.0f - shadow) * (diffuse + specular) + emission) * attenuation;
+}
+
+float calcShadow()
+{
+    vec3 fragToLight = Position - light.position;
+
+    float closestDepth = texture(depthMap, fragToLight).r;
+
+    closestDepth *= farPlane;
+
+    float currentDepth = length(fragToLight);
+
+    float bias = 0.05; 
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
 }

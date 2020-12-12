@@ -53,5 +53,14 @@
     <None Include="Shaders\floorShader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\depthShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\depthShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\depthShader.geom">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

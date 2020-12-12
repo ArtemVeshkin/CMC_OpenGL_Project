@@ -13,16 +13,19 @@ public:
 	// ID программы
 	GLuint Program;
 
-    Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
+    Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLchar* geometryPath = nullptr)
     {
         // 1. Получаем исходный код шейдера из filePath
         std::string vertexCode;
         std::string fragmentCode;
+        std::string geometryCode;
         std::ifstream vShaderFile;
         std::ifstream fShaderFile;
+        std::ifstream gShaderFile;
         // Удостоверимся, что ifstream объекты могут выкидывать исключения
         vShaderFile.exceptions(std::ifstream::badbit);
         fShaderFile.exceptions(std::ifstream::badbit);
+        gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         try
         {
             // Открываем файлы
@@ -38,6 +41,15 @@ public:
             // Преобразовываем потоки в массив GLchar
             vertexCode = vShaderStream.str();
             fragmentCode = fShaderStream.str();
+
+            if (geometryPath != nullptr)
+            {
+                gShaderFile.open(geometryPath);
+                std::stringstream gShaderStream;
+                gShaderStream << gShaderFile.rdbuf();
+                gShaderFile.close();
+                geometryCode = gShaderStream.str();
+            }
         }
         catch (std::ifstream::failure e)
         {
@@ -76,10 +88,29 @@ public:
             std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
         };
 
+        // Геометрический шейдер
+        unsigned int geometry;
+        if (geometryPath != nullptr)
+        {
+            const char* gShaderCode = geometryCode.c_str();
+            geometry = glCreateShader(GL_GEOMETRY_SHADER);
+            glShaderSource(geometry, 1, &gShaderCode, NULL);
+            glCompileShader(geometry);
+            // Если есть ошибки - вывести их
+            glGetShaderiv(geometry, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(geometry, 512, NULL, infoLog);
+                std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n" << infoLog << std::endl;
+            };
+        }
+
         // Шейдерная программа
         Program = glCreateProgram();
         glAttachShader(Program, vertex);
         glAttachShader(Program, fragment);
+        if (geometryPath != nullptr)
+            glAttachShader(Program, geometry);
         glLinkProgram(Program);
         //Если есть ошибки - вывести их
         glGetProgramiv(Program, GL_LINK_STATUS, &success);
@@ -92,6 +123,8 @@ public:
         // Удаляем шейдеры, поскольку они уже в программу и нам больше не нужны.
         glDeleteShader(vertex);
         glDeleteShader(fragment);
+        if (geometryPath != nullptr)
+            glDeleteShader(geometry);
     }
 
     void Use()

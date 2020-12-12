@@ -37,6 +37,7 @@ GLuint GenFloorVAO();
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture);
 
 const GLuint WIDTH = 1500, HEIGHT = 1000;
+const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 Camera camera(glm::vec3(0.0f, 1.3f, 4.0f));
 GLfloat lastX = WIDTH / 2.0;
@@ -59,6 +60,7 @@ int main()
     auto window = Init();
 
     // Shaders
+    Shader depthShader("Shaders/depthShader.vert", "Shaders/depthShader.frag", "Shaders/depthShader.geom");
     Shader skyboxShader("Shaders/skyboxShader.vert", "Shaders/skyboxShader.frag");
     Shader astronautShader("Shaders/astronautShader.vert", "Shaders/astronautShader.frag");
     Shader lampShader("Shaders/lampShader.vert", "Shaders/lampShader.frag");
@@ -89,15 +91,43 @@ int main()
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
 
+    // Depth Map
+    GLuint depthMapFBO, depthCubemap;
+    
+        glGenFramebuffers(1, &depthMapFBO);
+        glGenTextures(1, &depthCubemap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+
+        for (int i = 0; i < 6; ++i)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
+                         0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        }
+
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+
     // Binding textures
     astronautShader.Use();
     astronautShader.setInt("specularMap", 2);
     astronautShader.setInt("reflectMap", 3);
     astronautShader.setInt("emissionMap", 4);
     astronautShader.setInt("skybox", 5);
+    astronautShader.setInt("depthMap", 11);
 
     floorShader.Use();
     floorShader.setInt("texture_diffuse1", 0);
+    floorShader.setInt("depthMap", 1);
 
     skyboxShader.Use();
     skyboxShader.setInt("skybox", 0);
@@ -121,13 +151,53 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 
+        // depthCubemap transformation matrices
+        std::vector<glm::mat4> depthTransforms;
+        GLfloat depthFarPlane = 100.0f;
+        {
+            glm::mat4 depthProj = glm::perspective(glm::radians(90.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, 0.1f, depthFarPlane);
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            depthTransforms.push_back(depthProj * glm::lookAt(lampPos, lampPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        }
+        
+        // Making depthCubemap
+        {
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            depthShader.Use();
+            for (int i = 0; i < 6; ++i)
+                depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", depthTransforms[i]);
+            depthShader.setFloat("farPlane", depthFarPlane);
+            depthShader.setVec3("lightPos", lampPos);
+
+            // Floor
+            model = glm::mat4(1.0f);
+            glBindVertexArray(floorVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            // Astronaut
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            astronautModel.Draw(depthShader);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+
+        // Rendering scene with depthCubemap
+        glViewport(0, 0, WIDTH, HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        /*
         // Floor
         {
             floorShader.Use();
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            //model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-            //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0));
             floorShader.setMat4("model", model);
             floorShader.setMat4("view", view);
             floorShader.setMat4("projection", projection);
@@ -146,9 +216,13 @@ int main()
             floorShader.setFloat("light.linear", lampPower.y);
             floorShader.setFloat("light.quadratic", lampPower.z);
 
+            floorShader.setFloat("farPlane", depthFarPlane);
+
             glBindVertexArray(floorVAO);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
 
@@ -185,6 +259,8 @@ int main()
             glBindTexture(GL_TEXTURE_2D, astronautEmissiontMap);
             glActiveTexture(GL_TEXTURE5);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+            glActiveTexture(GL_TEXTURE11);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
             astronautModel.Draw(astronautShader);
         }
 
@@ -199,9 +275,9 @@ int main()
             lampShader.setMat4("model", model);
             lampModel.Draw(lampShader);
         }
-
+        */
         // Skybox (Рисую последним)
-        DrawSkyBox(skyboxShader, view, projection, skyboxVAO, skyboxTexture);
+        DrawSkyBox(skyboxShader, view, projection, skyboxVAO, depthCubemap);
 
         glfwSwapBuffers(window);
     }

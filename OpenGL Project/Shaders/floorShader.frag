@@ -24,21 +24,27 @@ uniform vec3 viewPos;
 
 uniform float shininess;
 uniform sampler2D texture_diffuse1;
+uniform samplerCube depthMap;
+
+uniform float farPlane;
 
 uniform vec3 cameraPos;
 
-vec3 PhongLightModel();
+float calcShadow();
+
+vec3 PhongLightModel(float shadow);
 
 void main()
 {
     if (sqrt(Position.x * Position.x + Position.z * Position.z) > 4)
         discard;
 
-    vec3 result = PhongLightModel();
-    FragColor = vec4(result, 1.0f);
+    vec3 result = PhongLightModel(calcShadow());
+    //FragColor = vec4(result, 1.0f);
+    FragColor = vec4(vec3(texture(depthMap, Position - light.position).r / farPlane), 1.0); 
 }
 
-vec3 PhongLightModel()
+vec3 PhongLightModel(float shadow)
 {
     // Фоновое освещение
     vec3 ambient = light.ambient * texture(texture_diffuse1, TexCoords).rgb;
@@ -62,5 +68,21 @@ vec3 PhongLightModel()
     float attenuation = 1.0 / (light.constant + light.linear * distance 
                                + light.quadratic * (distance * distance));
 
-    return (ambient + diffuse + specular) * attenuation;
+    return (ambient + (1.0f - shadow) * (diffuse + specular)) * attenuation;
+}
+
+float calcShadow()
+{
+    vec3 fragToLight = Position - light.position;
+
+    float closestDepth = texture(depthMap, fragToLight).r;
+
+    closestDepth *= farPlane;
+
+    float currentDepth = length(fragToLight);
+
+    float bias = 0.05; 
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
 }
