@@ -3,8 +3,6 @@
 out vec4 FragColor;
 
 struct Light {
-    vec3 position;
-
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -17,10 +15,13 @@ struct Light {
 uniform Light light;
 
 in vec3 Position;
-in vec3 Normal;
 in vec2 TexCoords;
 
-uniform vec3 viewPos;
+in vec3 tangentPosition;
+in vec3 tangentLightPos;
+in vec3 tangentCameraPos;
+
+uniform vec3 lightPos;
 
 uniform float farPlane;
 uniform float shininess;
@@ -30,48 +31,50 @@ uniform sampler2D specularMap;
 uniform sampler2D reflectMap;
 uniform sampler2D emissionMap;
 
-uniform vec3 cameraPos;
 uniform samplerCube skybox;
 uniform samplerCube depthMap;
 
-vec3 ReflectSkybox();
+vec3 ReflectSkybox(vec3 Normal);
 
-vec3 PhongLightModel(float shadow);
+vec3 PhongLightModel(float shadow, vec3 Normal);
 
 float calcShadow();
 
 void main()
 {
-    vec3 result = PhongLightModel(calcShadow()) + ReflectSkybox();
+    vec3 Normal = texture(texture_normal1, TexCoords).rgb;
+    Normal = normalize(Normal * 2.0 - 1.0);
+
+    vec3 result = PhongLightModel(calcShadow(), Normal) + ReflectSkybox(Normal);
     FragColor = vec4(result, 1.0f);
 }
 
-vec3 ReflectSkybox()
+vec3 ReflectSkybox(vec3 Normal)
 {
     // Reflecting skybox
     // Imitation of glass
     float ratio = 1.00 / 1.52;
-    vec3 falling = normalize(Position - cameraPos);
+    vec3 falling = normalize(tangentPosition - tangentCameraPos);
     vec3 reflected = refract(falling, normalize(Normal), ratio);
     vec4 reflection = texture(reflectMap, TexCoords) * (texture(skybox, reflected) 
                                                       + texture(texture_diffuse1, TexCoords));
     return (reflection).rgb;
 }
 
-vec3 PhongLightModel(float shadow)
+vec3 PhongLightModel(float shadow, vec3 Normal)
 {
     // Фоновое освещение
     vec3 ambient = light.ambient * texture(texture_diffuse1, TexCoords).rgb;
 
     // Диффузное освещение
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(light.position - Position);
+    vec3 lightDir = normalize(tangentLightPos - tangentPosition);
 
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * light.diffuse * texture(texture_diffuse1, TexCoords).rgb;
 
     // Блик
-    vec3 viewDir = normalize(viewPos - Position);
+    vec3 viewDir = normalize(tangentCameraPos - tangentPosition);
     vec3 reflectDir = reflect(-lightDir, norm);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
@@ -81,7 +84,7 @@ vec3 PhongLightModel(float shadow)
     vec3 emission = 1.6f * texture(emissionMap, TexCoords).rgb;
 
     // Коэффициент затухания света
-    float distance    = length(light.position - Position);
+    float distance    = length(tangentLightPos - tangentPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance 
                                + light.quadratic * (distance * distance));
 
@@ -90,7 +93,7 @@ vec3 PhongLightModel(float shadow)
 
 float calcShadow()
 {
-    vec3 fragToLight = Position - light.position;
+    vec3 fragToLight = Position - lightPos;
 
     float currentDepth = length(fragToLight);
 

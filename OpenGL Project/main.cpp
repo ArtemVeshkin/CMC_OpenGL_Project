@@ -48,7 +48,7 @@ bool keys[1024];
 
 // Light characteristics
 glm::vec3 lampPos = glm::vec3(0.8f - 0.2f, 2.0f, 1.0f + 0.8f);
-glm::vec3 lampPower(1.0f, 0.045f, 0.0075f);
+glm::vec3 lampPower(1.0f, 0.022f, 0.0019f);
 bool lightMoving = false;
 
 // Deltatime
@@ -75,7 +75,7 @@ int main()
 
     Model bb8Model("Models/bb8/source/BB8.fbx");
     GLuint bb8NormalMap = LoadTexture("Models/bb8/BB8_N.png");
-    GLuint bb8EmissiontMap = LoadTexture("Models/bb8/BB8_E.png");
+    GLuint bb8EmissionMap = LoadTexture("Models/bb8/BB8_E.png");
 
     Model lampModel("Models/Ball/ball.obj");
 
@@ -224,7 +224,6 @@ int main()
             floorShader.setMat4("projection", projection);
             floorShader.setVec3("cameraPos", camera.Position);
             // Light
-            floorShader.setVec3("viewPos", camera.Position);
             floorShader.setVec3("light.position", lampPos);
 
             floorShader.setFloat("shininess", 128.0f);
@@ -259,8 +258,7 @@ int main()
             astronautShader.setMat4("projection", projection);
             astronautShader.setVec3("cameraPos", camera.Position);
             // Light
-            astronautShader.setVec3("viewPos", camera.Position);
-            astronautShader.setVec3("light.position", lampPos);
+            astronautShader.setVec3("lightPos", lampPos);
 
             astronautShader.setFloat("shininess", 64.0f);
 
@@ -301,8 +299,7 @@ int main()
             bb8Shader.setMat4("projection", projection);
             bb8Shader.setVec3("cameraPos", camera.Position);
             // Light
-            bb8Shader.setVec3("viewPos", camera.Position);
-            bb8Shader.setVec3("light.position", lampPos);
+            bb8Shader.setVec3("lightPos", lampPos);
 
             bb8Shader.setFloat("shininess", 64.0f);
 
@@ -318,9 +315,9 @@ int main()
 
             // Maps
             glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, bb8EmissiontMap);
+            glBindTexture(GL_TEXTURE_2D, bb8NormalMap);
             glActiveTexture(GL_TEXTURE3);
-            glBindTexture(GL_TEXTURE_2D, bb8EmissiontMap);
+            glBindTexture(GL_TEXTURE_2D, bb8EmissionMap);
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
             bb8Model.Draw(bb8Shader);

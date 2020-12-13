@@ -20,8 +20,6 @@ in vec3 Position;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform vec3 viewPos;
-
 uniform float shininess;
 uniform sampler2D texture_diffuse1;
 uniform samplerCube depthMap;
@@ -57,7 +55,7 @@ vec3 PhongLightModel(float shadow)
     vec3 diffuse = diff * light.diffuse * texture(texture_diffuse1, TexCoords).rgb;
 
     // Блик
-    vec3 viewDir = normalize(viewPos - Position);
+    vec3 viewDir = normalize(cameraPos - Position);
     vec3 reflectDir = reflect(-lightDir, norm);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
