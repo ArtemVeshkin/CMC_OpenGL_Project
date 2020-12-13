@@ -51,6 +51,9 @@ glm::vec3 lampPos = glm::vec3(0.8f - 0.2f, 2.0f, 1.0f + 0.8f);
 glm::vec3 lampPower(1.0f, 0.022f, 0.0019f);
 bool lightMoving = false;
 
+GLfloat heightScale = 0.025f;
+bool ParallaxMapping = true;
+
 // Deltatime
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
@@ -72,10 +75,12 @@ int main()
     GLuint astronautSpecularMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-S.png");
     GLuint astronautReflectMap = LoadTexture("Models/astronaut-white-suit/Astronaut_white_de4K-reflect.png");
     GLuint astronautEmissiontMap = LoadTexture("Models/astronaut-white-suit/Astronaut_black_illu.png");
+    GLuint astronautHeightMap = LoadTexture("Models/astronaut-white-suit/Astronaut_h_I.png");
 
     Model bb8Model("Models/bb8/source/BB8.fbx");
     GLuint bb8NormalMap = LoadTexture("Models/bb8/BB8_N.png");
     GLuint bb8EmissionMap = LoadTexture("Models/bb8/BB8_E.png");
+    GLuint bb8HeightMap = LoadTexture("Models/bb8/BB8_H_I_2.png");
 
     Model lampModel("Models/Ball/ball.obj");
 
@@ -127,13 +132,16 @@ int main()
     astronautShader.setInt("specularMap", 2);
     astronautShader.setInt("reflectMap", 3);
     astronautShader.setInt("emissionMap", 4);
-    astronautShader.setInt("skybox", 6);
-    astronautShader.setInt("depthMap", 5);
+    astronautShader.setInt("heightMap", 5);
+    astronautShader.setInt("depthMap", 6);
+    astronautShader.setInt("skybox", 7);
+    
 
     bb8Shader.Use();
     bb8Shader.setInt("normalMap", 2);
     bb8Shader.setInt("emissionMap", 3);
     bb8Shader.setInt("depthMap", 4);
+    bb8Shader.setInt("heightMap", 5);
 
     floorShader.Use();
     floorShader.setInt("texture_diffuse1", 0);
@@ -272,6 +280,9 @@ int main()
 
             astronautShader.setFloat("farPlane", depthFarPlane);
 
+            astronautShader.setFloat("heightScale", heightScale);
+            astronautShader.setBool("parallaxMapping", ParallaxMapping);
+
             // Maps
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, astronautSpecularMap);
@@ -280,9 +291,12 @@ int main()
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_2D, astronautEmissiontMap);
             glActiveTexture(GL_TEXTURE5);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            glBindTexture(GL_TEXTURE_2D, astronautHeightMap);
             glActiveTexture(GL_TEXTURE6);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            glActiveTexture(GL_TEXTURE7);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+            
             astronautModel.Draw(astronautShader);
         }
 
@@ -313,6 +327,9 @@ int main()
 
             bb8Shader.setFloat("farPlane", depthFarPlane);
 
+            bb8Shader.setFloat("heightScale", heightScale);
+            bb8Shader.setBool("parallaxMapping", ParallaxMapping);
+
             // Maps
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, bb8NormalMap);
@@ -320,6 +337,8 @@ int main()
             glBindTexture(GL_TEXTURE_2D, bb8EmissionMap);
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_2D, bb8HeightMap);
             bb8Model.Draw(bb8Shader);
         }
 
@@ -564,6 +583,29 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     if (key == GLFW_KEY_M && action == GLFW_PRESS)
     {
         lightMoving ^= true;
+        std::cout << "LightMoving: " << lightMoving << std::endl;
+    }
+
+    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        ParallaxMapping ^= true;
+        std::cout << "ParallaxMapping: " << ParallaxMapping << std::endl;
+    }
+
+    if (key == GLFW_KEY_Q && action == GLFW_PRESS)
+    {
+        heightScale -= 0.005f;
+        if (heightScale < 0)
+        {
+            heightScale = 0;
+        }
+        std::cout << "HeightScale = " << (float) heightScale<< std::endl;
+    }
+
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
+    {
+        heightScale += 0.005f;
+        std::cout << "HeightScale = " << (float) heightScale << std::endl;
     }
 
     if (key >= 0 && key < sizeof(keys))

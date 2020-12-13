@@ -7,7 +7,7 @@ layout (location = 3) in vec3 tangent;
 layout (location = 4) in vec3 biTangent;
 
 out vec3 Position;
-out vec2 TexCoords;
+out vec2 baseTexCoords;
 
 out vec3 tangentPosition;
 out vec3 tangentLightPos;
@@ -23,7 +23,7 @@ uniform vec3 cameraPos;
 void main()
 {
     Position  = vec3(model * vec4(position, 1.0));
-    TexCoords = texCoords;
+    baseTexCoords = texCoords;
 
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * tangent);
