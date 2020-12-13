@@ -1,6 +1,7 @@
 ﻿#version 330 core
 
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
 
 struct Light {
     vec3 ambient;
@@ -60,6 +61,12 @@ void main()
 
     vec3 result = PhongLightModel(calcShadow(), Normal, TexCoords);
     FragColor = vec4(result, 1.0f);
+
+    float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        BrightColor = vec4(FragColor.rgb, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }
 
 vec3 PhongLightModel(float shadow, vec3 Normal, vec2 TexCoords)
@@ -82,7 +89,7 @@ vec3 PhongLightModel(float shadow, vec3 Normal, vec2 TexCoords)
     vec3 specular = spec * light.specular * texture(texture_specular1, TexCoords).rgb;
 
     // Свечения
-    vec3 emission = 1.8f * texture(emissionMap, TexCoords).rgb;
+    vec3 emission = 5.0f * texture(emissionMap, TexCoords).rgb;
 
     // Коэффициент затухания света
     float distance    = length(tangentLightPos - tangentPosition);
@@ -146,27 +153,22 @@ vec2 ParallaxMapping(vec2 TexCoords)
     }
 
     // Relief PM
-    // уполовиниваем смещение текстурных координат и размер слоя глубины
 	deltaTexCoords *= 0.5;
 	layerDepth *= 0.5;
-    // сместимся в обратном направлении от точки, найденной в Steep PM
+    
 	newTexCoords += deltaTexCoords;
 	currentLayerDepth -= layerDepth;
 
-    // установим максимум итераций поиска…
-	int _reliefSteps = 10;
+	int _reliefSteps = 6;
 	int currentStep = _reliefSteps;
 	while (currentStep > 0) {
 		currentDepth = texture(heightMap, newTexCoords).r;
 		deltaTexCoords *= 0.5;
 	    layerDepth *= 0.5;
-        // если выборка глубины больше текущей глубины слоя, 
-        // то уходим в левую половину интервала
 		if (currentLayerDepth < currentDepth) {
 			newTexCoords -= deltaTexCoords;
 	        currentLayerDepth += layerDepth;
 		}
-        // иначе уходим в правую половину интервала
 		else {
 			newTexCoords += deltaTexCoords;
 	        currentLayerDepth -= layerDepth;

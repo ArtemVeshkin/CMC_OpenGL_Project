@@ -68,5 +68,17 @@
     <None Include="Shaders\bb8Shader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\blurShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\blurShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\bloomShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\bloomShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

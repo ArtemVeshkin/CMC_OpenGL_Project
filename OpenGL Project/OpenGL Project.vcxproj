@@ -156,6 +156,10 @@
     <None Include="Shaders\astronautShader.vert" />
     <None Include="Shaders\bb8Shader.frag" />
     <None Include="Shaders\bb8Shader.vert" />
+    <None Include="Shaders\bloomShader.frag" />
+    <None Include="Shaders\bloomShader.vert" />
+    <None Include="Shaders\blurShader.frag" />
+    <None Include="Shaders\blurShader.vert" />
     <None Include="Shaders\depthShader.frag" />
     <None Include="Shaders\depthShader.geom" />
     <None Include="Shaders\depthShader.vert" />

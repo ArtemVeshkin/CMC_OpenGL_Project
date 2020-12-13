@@ -33,6 +33,7 @@ void UpdateDeltaTime();
 GLuint LoadTexture(std::string name, GLenum format = GL_RGB);
 unsigned int LoadCubeMap(std::vector<std::string> names);
 GLuint GenSkyBoxVAO();
+GLuint GenNDCQuadVAO();
 GLuint GenFloorVAO();
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture);
 
@@ -54,6 +55,9 @@ bool lightMoving = false;
 GLfloat heightScale = 0.025f;
 bool ParallaxMapping = true;
 
+bool Bloom = true;
+GLfloat bloomExposure = 0.95f;
+
 // Deltatime
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
@@ -69,6 +73,8 @@ int main()
     Shader bb8Shader("Shaders/bb8Shader.vert", "Shaders/bb8Shader.frag");
     Shader lampShader("Shaders/lampShader.vert", "Shaders/lampShader.frag");
     Shader floorShader("Shaders/floorShader.vert", "Shaders/floorShader.frag");
+    Shader blurShader("Shaders/blurShader.vert", "Shaders/blurShader.frag");
+    Shader bloomShader("Shaders/bloomShader.vert", "Shaders/bloomShader.frag");
 
     // Models
     Model astronautModel("Models/astronaut-white-suit/astronaut.obj");
@@ -100,6 +106,9 @@ int main()
     };
     GLuint skyboxTexture = LoadCubeMap(names);
     GLuint skyboxVAO = GenSkyBoxVAO();
+
+    // NDCQuad
+    GLuint NDCQuad = GenNDCQuadVAO();
     
     // Depth Map
     GLuint depthMapFBO, depthCubemap;
@@ -127,28 +136,99 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    // Floating point Framebuffers
+    GLuint hdrFBO, colorBuffers[2];
+    {
+        glGenFramebuffers(1, &hdrFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        glGenTextures(2, colorBuffers);
+        for (int i = 0; i < 2; ++i)
+        {
+            glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+        }
+        unsigned int rboDepth;
+        glGenRenderbuffers(1, &rboDepth);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+        GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        glDrawBuffers(2, attachments);
+    }
+
+    // Framebuffers for bluring
+    GLuint pingpongFBO[2], pingpongColorbuffers[2];
+    {
+        glGenFramebuffers(2, pingpongFBO);
+        glGenTextures(2, pingpongColorbuffers);
+        for (int i = 0; i < 2; ++i)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+            glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+        }
+    }
+
     // Binding textures
-    astronautShader.Use();
-    astronautShader.setInt("specularMap", 2);
-    astronautShader.setInt("reflectMap", 3);
-    astronautShader.setInt("emissionMap", 4);
-    astronautShader.setInt("heightMap", 5);
-    astronautShader.setInt("depthMap", 6);
-    astronautShader.setInt("skybox", 7);
+    {
+        // Astronaut
+        {
+            astronautShader.Use();
+            astronautShader.setInt("specularMap", 2);
+            astronautShader.setInt("reflectMap", 3);
+            astronautShader.setInt("emissionMap", 4);
+            astronautShader.setInt("heightMap", 5);
+            astronautShader.setInt("depthMap", 6);
+            astronautShader.setInt("skybox", 7);
+        }
+
+        // BB8
+        {
+            bb8Shader.Use();
+            bb8Shader.setInt("normalMap", 2);
+            bb8Shader.setInt("emissionMap", 3);
+            bb8Shader.setInt("depthMap", 4);
+            bb8Shader.setInt("heightMap", 5);
+        }
+
+        // Floor
+        {
+            floorShader.Use();
+            floorShader.setInt("texture_diffuse1", 0);
+            floorShader.setInt("depthMap", 1);
+        }
+
+        // Skybox
+        {
+            skyboxShader.Use();
+            skyboxShader.setInt("skybox", 0);
+        }
+
+        // Blur
+        {
+            blurShader.Use();
+            blurShader.setInt("image", 0);
+        }
+
+        // Bloom
+        {
+            bloomShader.Use();
+            bloomShader.setInt("scene", 0);
+            bloomShader.setInt("bloomBlur", 1);
+        }
+    }
     
-
-    bb8Shader.Use();
-    bb8Shader.setInt("normalMap", 2);
-    bb8Shader.setInt("emissionMap", 3);
-    bb8Shader.setInt("depthMap", 4);
-    bb8Shader.setInt("heightMap", 5);
-
-    floorShader.Use();
-    floorShader.setInt("texture_diffuse1", 0);
-    floorShader.setInt("depthMap", 1);
-
-    skyboxShader.Use();
-    skyboxShader.setInt("skybox", 0);
 
     // Game Loop
     while (!glfwWindowShouldClose(window))
@@ -221,6 +301,8 @@ int main()
         
         // Rendering scene with depthCubemap
         glViewport(0, 0, WIDTH, HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         // Floor
@@ -356,6 +438,42 @@ int main()
 
         // Skybox (Рисую последним)
         DrawSkyBox(skyboxShader, view, projection, skyboxVAO, skyboxTexture);
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // Bloom
+        // Blur Bright image
+        blurShader.Use();
+        bool horizontal = true, first_iteration = true;
+        int amount = 20;
+        for (int i = 0; i < amount; ++i)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+            blurShader.setInt("horizontal", horizontal);
+            glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
+            
+            glBindVertexArray(NDCQuad);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glBindVertexArray(0);
+
+            horizontal ^= true;
+            if (first_iteration)
+                first_iteration = false;
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Mixing
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        bloomShader.Use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
+        bloomShader.setBool("bloom", Bloom);
+        bloomShader.setFloat("exposure", bloomExposure);
+        
+        glBindVertexArray(NDCQuad);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindVertexArray(0);
 
         glfwSwapBuffers(window);
     }
@@ -557,6 +675,31 @@ GLuint GenFloorVAO()
     return floorVAO;
 }
 
+GLuint GenNDCQuadVAO()
+{
+    GLfloat quadVertices[] = {
+        // positions        // texture Coords
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+    };
+
+    GLuint quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    return quadVAO;
+}
+
 void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuint skyboxVAO, GLuint skyboxTexture)
 {
     glDepthFunc(GL_LEQUAL);
@@ -606,6 +749,28 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     {
         heightScale += 0.005f;
         std::cout << "HeightScale = " << (float) heightScale << std::endl;
+    }
+
+    if (key == GLFW_KEY_B && action == GLFW_PRESS)
+    {
+        Bloom ^= true;
+        std::cout << "Bloom: " << Bloom << std::endl;
+    }
+
+    if (key == GLFW_KEY_V && action == GLFW_PRESS)
+    {
+        bloomExposure -= 0.05f;
+        if (bloomExposure < 0)
+        {
+            bloomExposure = 0;
+        }
+        std::cout << "Bloom exposure = " << (float)bloomExposure << std::endl;
+    }
+
+    if (key == GLFW_KEY_N && action == GLFW_PRESS)
+    {
+        bloomExposure += 0.05f;
+        std::cout << "Bloom exposure = " << (float)bloomExposure << std::endl;
     }
 
     if (key >= 0 && key < sizeof(keys))
