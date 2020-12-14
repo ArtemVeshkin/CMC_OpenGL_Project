@@ -71,27 +71,27 @@ void main()
 
 vec3 PhongLightModel(float shadow, vec3 Normal, vec2 TexCoords)
 {
-    // Р¤РѕРЅРѕРІРѕРµ РѕСЃРІРµС‰РµРЅРёРµ
+    // Фоновое освещение
     vec3 ambient = light.ambient * texture(texture_diffuse1, TexCoords).rgb;
 
-    // Р”РёС„С„СѓР·РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ
+    // Диффузное освещение
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(tangentLightPos - tangentPosition);
 
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * light.diffuse * texture(texture_diffuse1, TexCoords).rgb;
 
-    // Р‘Р»РёРє
+    // Блик
     vec3 viewDir = normalize(tangentCameraPos - tangentPosition);
     vec3 reflectDir = reflect(-lightDir, norm);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = spec * light.specular * texture(texture_specular1, TexCoords).rgb;
 
-    // РЎРІРµС‡РµРЅРёСЏ
+    // Свечения
     vec3 emission = 5.0f * texture(emissionMap, TexCoords).rgb;
 
-    // РљРѕСЌС„С„РёС†РёРµРЅС‚ Р·Р°С‚СѓС…Р°РЅРёСЏ СЃРІРµС‚Р°
+    // Коэффициент затухания света
     float distance    = length(tangentLightPos - tangentPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance 
                                + light.quadratic * (distance * distance));
