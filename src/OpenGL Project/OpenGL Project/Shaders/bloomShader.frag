@@ -18,7 +18,7 @@ void main()
     if (bloom)
         hdrColor += bloomColor;
 
-    // Тональная компрессия
+    // РўРѕРЅР°Р»СЊРЅР°СЏ РєРѕРјРїСЂРµСЃСЃРёСЏ
     vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
 
     FragColor = vec4(result, 1.0);

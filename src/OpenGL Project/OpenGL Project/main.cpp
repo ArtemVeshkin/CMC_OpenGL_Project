@@ -436,7 +436,7 @@ int main()
             lampModel.Draw(lampShader);
         }
 
-        // Skybox (Рисую последним)
+        // Skybox (Р РёСЃСѓСЋ РїРѕСЃР»РµРґРЅРёРј)
         DrawSkyBox(skyboxShader, view, projection, skyboxVAO, skyboxTexture);
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -482,13 +482,13 @@ int main()
 
 GLFWwindow* Init()
 {
-    // Инициализация и конфигурация glfw
+    // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Рё РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ glfw
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Создание окна
+    // РЎРѕР·РґР°РЅРёРµ РѕРєРЅР°
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Veshkin Artem :: group 301", nullptr, nullptr);
     if (window == nullptr)
@@ -704,7 +704,7 @@ void DrawSkyBox(Shader skyboxShader, glm::mat4 view, glm::mat4 projection, GLuin
 {
     glDepthFunc(GL_LEQUAL);
     skyboxShader.Use();
-    // Не хотим, чтобы скайбокс двигался
+    // РќРµ С…РѕС‚РёРј, С‡С‚РѕР±С‹ СЃРєР°Р№Р±РѕРєСЃ РґРІРёРіР°Р»СЃСЏ
     view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
     skyboxShader.setMat4("view", view);
     skyboxShader.setMat4("projection", projection);

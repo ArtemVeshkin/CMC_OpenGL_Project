@@ -9,7 +9,7 @@ void main()
 {
     float lightDistance = length(Position.xyz - lightPos);
     
-    // преобразование к интервалу [0, 1]
+    // РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ Рє РёРЅС‚РµСЂРІР°Р»Сѓ [0, 1]
     lightDistance = lightDistance / farPlane;
     
     gl_FragDepth = lightDistance;
