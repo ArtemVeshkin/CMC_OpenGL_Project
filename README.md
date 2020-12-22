@@ -8,6 +8,6 @@
 :white_check_mark: Parallax relief mapping  
 ## Скриншот работы программы:  
 ![Demo](https://github.com/ArtemVeshkin/CMC_OpenGL_Project/blob/main/ext/Resources/Demo.png "Demo")
-## Сборка
+## Сборка и запуск
 Исходный код находится в папке `/src` главной ветки, все используемые библиотеки находятся в папке `/ext`. Для запуска Вы можете собрать работу у себя, запустив `.sln`
 проект для Visual Studio, либо запустить уже собраную программу. Она доступна для скачивания в по этой [ссылке](https://github.com/ArtemVeshkin/CMC_OpenGL_Project/releases/tag/v1.0).
