@@ -80,7 +80,7 @@ vec3 ReflectSkybox(vec3 Normal, vec2 TexCoords)
     vec3 reflected = refract(falling, normalize(Normal), ratio);
     vec4 reflection = texture(reflectMap, TexCoords) * (texture(skybox, reflected) 
                                                       + texture(texture_diffuse1, TexCoords));
-    return (reflection).rgb;
+    return reflection.rgb;
 }
 
 vec3 PhongLightModel(float shadow, vec3 Normal, vec2 TexCoords)
@@ -148,7 +148,7 @@ vec2 ParallaxMapping(vec2 TexCoords)
 
     float minLayers = 2;
     float maxLayers = 32;
-    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
     
     float layerDepth = 1.0f / numLayers;
     
@@ -162,7 +162,7 @@ vec2 ParallaxMapping(vec2 TexCoords)
     while(currentLayerDepth < currentDepth)
     {
         newTexCoords -= deltaTexCoords;
-        currentLayerDepth += layerDepth;  
+        currentLayerDepth += layerDepth;
         currentDepth = texture(heightMap, newTexCoords).r;
     }
 
@@ -173,9 +173,8 @@ vec2 ParallaxMapping(vec2 TexCoords)
 	newTexCoords += deltaTexCoords;
 	currentLayerDepth -= layerDepth;
 
-	int _reliefSteps = 6;
-	int currentStep = _reliefSteps;
-	while (currentStep > 0) {
+	int currentStep = 0;
+	while (currentStep < 5) {
 		currentDepth = texture(heightMap, newTexCoords).r;
 		deltaTexCoords *= 0.5;
 	    layerDepth *= 0.5;
@@ -187,7 +186,7 @@ vec2 ParallaxMapping(vec2 TexCoords)
 			newTexCoords += deltaTexCoords;
 	        currentLayerDepth -= layerDepth;
 		}
-		--currentStep;
+		++currentStep;
 	}
  
     return newTexCoords;
